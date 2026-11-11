@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <!-- Sorgt dafür, dass die Seite auf dem Handy in der richtigen Größe angezeigt wird -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fbf6f0">
+  <meta name="description" content="Deine Aufgaben für heute – ruhig und übersichtlich.">
+  <title>Mein Tag</title>
+
+  <!-- Damit man die Seite als App auf den Homescreen legen kann -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32">
+  <!-- Extra für iPhone/iPad: Icon, Name und Vollbild ohne Browserleiste -->
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Mein Tag">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============ Ansicht 1: Tag (Startbildschirm) ============ -->
+  <div id="ansicht-tag" class="ansicht">
+    <!-- Kopfzeile: Pfeile links/rechts und in der Mitte das Datum -->
+    <header class="kopf">
+      <button id="btn-zurueck" class="rund" aria-label="Vorheriger Tag">‹</button>
+      <div class="kopf-mitte">
+        <p id="datum-relativ" class="relativ">Heute</p>
+        <h1 id="datum-titel"></h1>
+      </div>
+      <button id="btn-vor" class="rund" aria-label="Nächster Tag">›</button>
+    </header>
+
+    <!-- Erscheint nur, wenn man nicht auf "heute" ist -->
+    <button id="btn-heute" class="heute-knopf" hidden>↺ Zurück zu heute</button>
+
+    <!-- Hier füllt app.js die Aufgabenliste ein -->
+    <main id="liste"></main>
+  </div>
+
+  <!-- ============ Ansicht 2: Woche ============ -->
+  <div id="ansicht-woche" class="ansicht" hidden>
+    <header class="kopf">
+      <button id="woche-zurueck" class="rund" aria-label="Vorherige Woche">‹</button>
+      <div class="kopf-mitte">
+        <p id="woche-relativ" class="relativ"></p>
+        <h1 id="woche-titel"></h1>
+      </div>
+      <button id="woche-vor" class="rund" aria-label="Nächste Woche">›</button>
+    </header>
+    <main id="woche-liste"></main>
+  </div>
+
+  <!-- ============ Ansicht 3: Alle Aufgaben ============ -->
+  <div id="ansicht-alle" class="ansicht" hidden>
+    <header class="kopf">
+      <div class="kopf-mitte links">
+        <h1>Alle Aufgaben</h1>
+      </div>
+      <button id="alle-kategorien" class="knopf klein">✎ Kategorien</button>
+    </header>
+    <main>
+      <div id="alle-liste"></div>
+
+      <!-- Datensicherung: Export und Import -->
+      <section class="gruppe sicherung">
+        <h2 class="gruppe-titel">Datensicherung</h2>
+        <div class="block">
+          <p>Deine Daten liegen nur auf diesem Gerät. Sichere sie ab und zu als Datei – besonders vor einem Handywechsel.</p>
+          <p id="letzte-sicherung" class="leise"></p>
+          <button type="button" id="btn-export" class="knopf breit haupt">⬇ Daten exportieren</button>
+          <button type="button" id="btn-import" class="knopf breit">⬆ Daten importieren</button>
+          <input type="file" id="import-datei" accept=".json,application/json" hidden>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Runder Knopf unten rechts: neue Aufgabe -->
+  <button id="btn-neu" class="plus" aria-label="Neue Aufgabe">+</button>
+
+  <!-- Leiste unten zum Wechseln der Ansicht -->
+  <nav class="leiste" aria-label="Ansicht wählen">
+    <button type="button" data-ansicht="tag" aria-current="page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+      <span>Tag</span>
+    </button>
+    <button type="button" data-ansicht="woche">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      <span>Woche</span>
+    </button>
+    <button type="button" data-ansicht="alle">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>
+      <span>Alle</span>
+    </button>
+  </nav>
+
+
+  <!-- ============ Blatt: Aufgabe anlegen oder bearbeiten ============ -->
+  <div id="blatt-aufgabe" class="huelle" hidden>
+    <form id="form-aufgabe" class="blatt" novalidate role="dialog" aria-modal="true" aria-labelledby="form-ueberschrift">
+      <div class="blatt-kopf">
+        <h2 id="form-ueberschrift">Neue Aufgabe</h2>
+        <button type="button" class="schliessen" data-schliessen aria-label="Schließen">✕</button>
+      </div>
+
+      <label class="feld">
+        <span class="feld-name">Titel</span>
+        <input id="f-titel" type="text" maxlength="120" autocomplete="off" enterkeyhint="done">
+      </label>
+
+      <label class="feld">
+        <span class="feld-name">Notiz <small>(optional)</small></span>
+        <textarea id="f-notiz" rows="2" maxlength="500"></textarea>
+      </label>
+
+      <div class="feld">
+        <span class="feld-name">Kategorie</span>
+        <div id="f-kategorien" class="chips"></div>
+      </div>
+
+      <div class="feld">
+        <span class="feld-name">Wiederholung</span>
+        <div id="f-typ" class="segmente">
+          <button type="button" data-typ="einmalig">Einmalig</button>
+          <button type="button" data-typ="woche">Wöchent&shy;lich</button>
+          <button type="button" data-typ="monat">Monat&shy;lich</button>
+          <button type="button" data-typ="jahr">Jährlich</button>
+        </div>
+      </div>
+
+      <!-- Je nach Wiederholung wird nur der passende Teil angezeigt -->
+      <div class="teil" data-teil="einmalig">
+        <label class="feld">
+          <span class="feld-name">Am</span>
+          <input id="f-datum" type="date">
+        </label>
+      </div>
+
+      <div class="teil" data-teil="woche">
+        <div class="feld">
+          <span class="feld-name">An diesen Tagen</span>
+          <div id="f-wochentage" class="wochentage"></div>
+        </div>
+        <label class="feld">
+          <span class="feld-name">Wie oft</span>
+          <select id="f-alle-x"></select>
+        </label>
+      </div>
+
+      <div class="teil" data-teil="monat">
+        <div class="feld">
+          <label class="option">
+            <input type="radio" name="f-monat-art" value="monatTag">
+            <span>am</span> <select id="f-monat-tag"></select> <span>Tag</span>
+          </label>
+          <label class="option">
+            <input type="radio" name="f-monat-art" value="monatWochentag">
+            <span>am</span> <select id="f-monat-nummer"></select> <select id="f-monat-wochentag"></select>
+          </label>
+          <label class="option">
+            <input type="radio" name="f-monat-art" value="monatLetzter">
+            <span>am letzten Tag des Monats</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="teil" data-teil="jahr">
+        <div class="feld zeile">
+          <span>Am</span>
+          <select id="f-jahr-tag" aria-label="Tag"></select>
+          <select id="f-jahr-monat" aria-label="Monat"></select>
+        </div>
+      </div>
+
+      <div class="teil" data-teil="woche monat jahr">
+        <label class="feld">
+          <span class="feld-name">Gilt ab</span>
+          <input id="f-start" type="date">
+        </label>
+        <p id="f-hinweis-start" class="hinweis" hidden>Änderst du die Regel, gilt sie ab heute.</p>
+      </div>
+
+      <p id="f-vorschau" class="vorschau"></p>
+      <p id="f-fehler" class="fehler" hidden></p>
+
+      <div class="blatt-knoepfe">
+        <button type="button" id="f-loeschen" class="knopf gefahr">Löschen</button>
+        <button type="submit" class="knopf haupt">Speichern</button>
+      </div>
+    </form>
+  </div>
+
+
+  <!-- ============ Blatt: Kategorien verwalten ============ -->
+  <div id="blatt-kategorien" class="huelle" hidden>
+    <div class="blatt" role="dialog" aria-modal="true" aria-labelledby="kat-ueberschrift">
+      <div class="blatt-kopf">
+        <h2 id="kat-ueberschrift">Kategorien</h2>
+        <button type="button" class="schliessen" data-schliessen aria-label="Schließen">✕</button>
+      </div>
+      <div id="kategorien-liste"></div>
+      <button type="button" id="btn-kategorie-neu" class="knopf breit">+ Neue Kategorie</button>
+    </div>
+  </div>
+
+
+  <!-- ============ Blatt: Termin verschieben ============ -->
+  <div id="blatt-verschieben" class="huelle" hidden>
+    <div class="blatt" role="dialog" aria-modal="true" aria-labelledby="v-titel">
+      <div class="blatt-kopf">
+        <h2 id="v-titel"></h2>
+        <button type="button" class="schliessen" data-schliessen aria-label="Schließen">✕</button>
+      </div>
+      <p id="v-info" class="hinweis"></p>
+
+      <button type="button" id="v-morgen" class="knopf breit haupt">Auf morgen</button>
+
+      <div class="feld">
+        <span class="feld-name">Auf Datum …</span>
+        <div class="zeile">
+          <input id="v-datum" type="date" aria-label="Neues Datum">
+          <button type="button" id="v-datum-ok" class="knopf haupt">Verschieben</button>
+        </div>
+      </div>
+
+      <p class="hinweis">Verschieben betrifft nur diesen einen Termin, nicht die Wiederholung.</p>
+      <button type="button" id="v-bearbeiten" class="knopf breit">✎ Aufgabe bearbeiten</button>
+    </div>
+  </div>
+
+
+  <!-- Reihenfolge ist wichtig: spätere Dateien benutzen Dinge aus früheren -->
+  <script src="js/datum.js"></script>
+  <script src="js/regeln.js"></script>
+  <script src="js/termine.js"></script>
+  <script src="js/speicher.js"></script>
+  <script src="js/dialog.js"></script>
+  <script src="js/formular.js"></script>
+  <script src="js/kategorien.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/ansichten.js"></script>
+  <script src="js/sicherung.js"></script>
+
+  <script>
+    // Den "Service Worker" anmelden: Er speichert die App-Dateien,
+    // damit die App auch ohne Internet startet (siehe sw.js).
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+    // Den Browser bitten, unsere Daten nicht von selbst zu löschen, wenn der Speicher knapp wird
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist();
+    }
+  </script>
+</body>
+</html>
